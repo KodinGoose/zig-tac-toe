@@ -1,28 +1,43 @@
 const std = @import("std");
 
-fn checkForWinner(tiles: *[3][3]u8, symbol: u8) bool {
-    if (tiles.*[0][0] == symbol and tiles.*[0][1] == symbol and tiles.*[0][2] == symbol) {
+var player_1_turn = true;
+var index1: u8 = undefined;
+var index2: u8 = undefined;
+var input: []u8 = undefined;
+var turn_count: u4 = 0;
+var tiles = [3][3]u8{
+    [_]u8{ ' ', ' ', ' ' },
+    [_]u8{ ' ', ' ', ' ' },
+    [_]u8{ ' ', ' ', ' ' },
+};
+
+/// This is one byte bigger than it needs to be due to having to be compatible with windows
+/// This does force an extra check to keep compatibility with literaly everything else
+var buffer: [4]u8 = undefined;
+
+fn checkForWinner(symbol: u8) bool {
+    if (tiles[0][0] == symbol and tiles[0][1] == symbol and tiles[0][2] == symbol) {
         return true;
-    } else if (tiles.*[1][0] == symbol and tiles.*[1][1] == symbol and tiles.*[1][2] == symbol) {
+    } else if (tiles[1][0] == symbol and tiles[1][1] == symbol and tiles[1][2] == symbol) {
         return true;
-    } else if (tiles.*[2][0] == symbol and tiles.*[2][1] == symbol and tiles.*[2][2] == symbol) {
+    } else if (tiles[2][0] == symbol and tiles[2][1] == symbol and tiles[2][2] == symbol) {
         return true;
-    } else if (tiles.*[0][0] == symbol and tiles.*[1][0] == symbol and tiles.*[2][0] == symbol) {
+    } else if (tiles[0][0] == symbol and tiles[1][0] == symbol and tiles[2][0] == symbol) {
         return true;
-    } else if (tiles.*[0][1] == symbol and tiles.*[1][1] == symbol and tiles.*[2][1] == symbol) {
+    } else if (tiles[0][1] == symbol and tiles[1][1] == symbol and tiles[2][1] == symbol) {
         return true;
-    } else if (tiles.*[0][2] == symbol and tiles.*[1][2] == symbol and tiles.*[2][2] == symbol) {
+    } else if (tiles[0][2] == symbol and tiles[1][2] == symbol and tiles[2][2] == symbol) {
         return true;
-    } else if (tiles.*[0][0] == symbol and tiles.*[1][1] == symbol and tiles.*[2][2] == symbol) {
+    } else if (tiles[0][0] == symbol and tiles[1][1] == symbol and tiles[2][2] == symbol) {
         return true;
-    } else if (tiles.*[0][2] == symbol and tiles.*[1][1] == symbol and tiles.*[2][0] == symbol) {
+    } else if (tiles[0][2] == symbol and tiles[1][1] == symbol and tiles[2][0] == symbol) {
         return true;
     } else {
         return false;
     }
 }
 
-fn printBoard(tiles: *[3][3]u8, stdout: anytype) !void {
+fn printBoard(stdout: anytype) !void {
     try stdout.writeAll("\x1B[2J\x1B[H");
     try stdout.print(
         \\   1 2 3
@@ -50,19 +65,11 @@ pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
     const stdin = std.io.getStdIn().reader();
 
-    var tiles = [3][3]u8{ [_]u8{ ' ', ' ', ' ' }, [_]u8{ ' ', ' ', ' ' }, [_]u8{ ' ', ' ', ' ' } };
-    var player_turn = true;
-    var index1: u8 = undefined;
-    var index2: u8 = undefined;
-    var buffer: [3]u8 = undefined;
-    var input: []u8 = undefined;
-    var turn: u4 = 0;
-
     // main loop
     while (true) {
-        try printBoard(&tiles, &stdout);
+        try printBoard(&stdout);
 
-        if (player_turn) {
+        if (player_1_turn) {
             try stdout.writeAll("Player 1\n");
 
             while (true) {
@@ -75,6 +82,10 @@ pub fn main() !void {
                 if (input.len < 2) {
                     try stdout.writeAll("Invalid input. Give two indexes. Example: 11\n");
                     continue;
+                } else if (input.len > 2 and std.builtin.subsystem == null) {
+                    // std.builtin.subsystem returns null when not running on windows
+                    try stdout.writeAll("Invalid input. Give two indexes. Example: 11\n");
+                    continue;
                 }
                 index1 = input[1];
                 index2 = input[0];
@@ -83,7 +94,7 @@ pub fn main() !void {
                     return;
                 }
 
-                if (index1 > 51 or index2 > 51 or index1 < 49 or index2 < 49) {
+                if (index1 > '3' or index2 > '3' or index1 < '1' or index2 < '1') {
                     try stdout.writeAll("Invalid input. Invalid indexes.\n");
                     continue;
                 }
@@ -113,6 +124,10 @@ pub fn main() !void {
                 if (input.len < 2) {
                     try stdout.writeAll("Invalid input. Give two indexes. Example: 11\n");
                     continue;
+                } else if (input.len > 2 and std.builtin.subsystem == null) {
+                    // std.builtin.subsystem returns null when not running on windows
+                    try stdout.writeAll("Invalid input. Give two indexes. Example: 11\n");
+                    continue;
                 }
                 index1 = input[1];
                 index2 = input[0];
@@ -121,7 +136,7 @@ pub fn main() !void {
                     return;
                 }
 
-                if (index1 > 51 or index2 > 51 or index1 < 49 or index2 < 49) {
+                if (index1 > '3' or index2 > '3' or index1 < '1' or index2 < '1') {
                     try stdout.writeAll("Invalid input. Invalid indexes.\n");
                     continue;
                 }
@@ -140,16 +155,16 @@ pub fn main() !void {
             tiles[index1][index2] = 'X';
         }
 
-        if (player_turn) {
-            player_turn = false;
+        if (player_1_turn) {
+            player_1_turn = false;
         } else {
-            player_turn = true;
+            player_1_turn = true;
         }
 
-        turn += 1;
+        turn_count += 1;
 
-        if (checkForWinner(&tiles, 'O')) {
-            try printBoard(&tiles, &stdout);
+        if (checkForWinner('O')) {
+            try printBoard(&stdout);
             try stdout.writeAll("player 1 wins!");
             std.time.sleep(5000000000);
             for (tiles, 0..) |row, i| {
@@ -157,9 +172,9 @@ pub fn main() !void {
                     tiles[i][j] = ' ';
                 }
             }
-            turn = 0;
-        } else if (checkForWinner(&tiles, 'X')) {
-            try printBoard(&tiles, &stdout);
+            turn_count = 0;
+        } else if (checkForWinner('X')) {
+            try printBoard(&stdout);
             try stdout.writeAll("player 2 wins!");
             std.time.sleep(5000000000);
             for (tiles, 0..) |row, i| {
@@ -167,11 +182,11 @@ pub fn main() !void {
                     tiles[i][j] = ' ';
                 }
             }
-            turn = 0;
+            turn_count = 0;
         }
 
-        if (turn == 9) {
-            try printBoard(&tiles, &stdout);
+        if (turn_count == 9) {
+            try printBoard(&stdout);
             try stdout.writeAll("It's a draw!");
             std.time.sleep(5000000000);
             for (tiles, 0..) |row, i| {
@@ -179,7 +194,7 @@ pub fn main() !void {
                     tiles[i][j] = ' ';
                 }
             }
-            turn = 0;
+            turn_count = 0;
         }
     }
 }
